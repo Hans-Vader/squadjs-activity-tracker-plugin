@@ -237,10 +237,28 @@ export default class ActivityTracker extends BasePlugin {
   // --- Command Handler ---
 
   async onAfkCommand(data) {
-    if (this.options.adminChatOnly && data.chat !== 'ChatAdmin') return;
+    // Event handlers are not awaited by SquadJS: without this an RCON failure
+    // is an unhandled rejection and the command just "does nothing".
+    try {
+      await this.handleAfkCommand(data);
+    } catch (err) {
+      this.verbose(1, `!${this.options.commandPrefix} failed: ${err.stack || err}`);
+    }
+  }
 
-    const caller = data.player;
-    if (!caller || !caller.eosID) return;
+  async handleAfkCommand(data) {
+    if (this.options.adminChatOnly && data.chat !== 'ChatAdmin') {
+      this.verbose(1, `Ignored !${this.options.commandPrefix} from ${data.name} in ${data.chat} (adminChatOnly).`);
+      return;
+    }
+
+    // data.player is null when SquadJS could not resolve the sender from its
+    // player list; the chat packet's eosID is still enough to reply.
+    const caller = data.player || { eosID: data.eosID };
+    if (!caller.eosID) {
+      this.verbose(1, `Ignored !${this.options.commandPrefix}: no EOS ID for ${data.name}.`);
+      return;
+    }
 
     const args = (data.message || '').trim();
 
@@ -303,14 +321,15 @@ export default class ActivityTracker extends BasePlugin {
 
     inactive.sort((a, b) => b.inactiveMs - a.inactiveMs);
 
-    const lines = [`${this.options.warnMessageHeader} (>${minutesThreshold}m)`];
+    // Total goes in the header so it survives the maxPage cut.
+    const lines = [
+      `${this.options.warnMessageHeader} ${inactive.length} player(s) >${minutesThreshold}m`
+    ];
     for (const entry of inactive) {
       lines.push(
         `[${this.formatDuration(entry.inactiveMs)}] T:${entry.teamID}/S:${entry.squadID} ${entry.name} (last: ${entry.lastEvent})`
       );
     }
-    lines.push('---');
-    lines.push(`${inactive.length} player(s) inactive >${minutesThreshold}m`);
 
     await this.sendWarns(caller.eosID, lines.join('\n'));
   }
@@ -367,7 +386,8 @@ export default class ActivityTracker extends BasePlugin {
     }
 
     if (matches.length > 1) {
-      const names = matches.map((p) => p.name).join(', ');
+      const more = matches.length > 8 ? ` ... (+${matches.length - 8} more)` : '';
+      const names = matches.slice(0, 8).map((p) => p.name).join(', ') + more;
       await this.server.rcon.warn(
         caller.eosID,
         `Multiple matches for "${nameQuery}": ${names}`
@@ -423,7 +443,13 @@ export default class ActivityTracker extends BasePlugin {
     }
     if (chunk) chunks.push(chunk);
 
-    for (const [i, page] of chunks.slice(0, this.options.maxPage).entries()) {
+    const pages = chunks.slice(0, this.options.maxPage);
+    const dropped = chunks.slice(this.options.maxPage).flatMap((c) => c.split('\n')).length;
+    if (dropped && pages.length) {
+      pages[pages.length - 1] += `\n... +${dropped} more, try !${this.options.commandPrefix} <higher minutes>`;
+    }
+
+    for (const [i, page] of pages.entries()) {
       if (i > 0) await new Promise((resolve) => setTimeout(resolve, 250));
       await this.server.rcon.warn(eosID, page);
     }

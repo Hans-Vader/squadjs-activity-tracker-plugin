@@ -19,13 +19,13 @@ Only players assigned to a squad are included in the list output. Unassigned pla
 ### Example Output
 
 ```
---- AFK Report --- (>10m)
-[42m] PlayerName1 (last: Kill)
-[35m] PlayerName2 (last: Possess)
-[12m] PlayerName3 (last: Revive)
----
-3 player(s) inactive >10m
+--- AFK Report --- 3 player(s) >10m
+[42m] T:1/S:3 PlayerName1 (last: Kill)
+[35m] T:2/S:1 PlayerName2 (last: Connected)
+[12m] T:1/S:5 PlayerName3 (last: Revive)
 ```
+
+The list is sorted by longest inactivity and limited to `maxPage` warn messages. If more players match, the last message ends with `... +N more, try !afk <higher minutes>`.
 
 ## Tracked Events
 
@@ -33,11 +33,9 @@ The plugin records player activity from the following server events:
 
 | Event | Activity Recorded For | Activity Label |
 |---|---|---|
-| `PLAYER_WOUNDED` | Attacker | `Wound` |
+| `PLAYER_WOUNDED` | Attacker + Victim | `Wound` / `Wounded` |
 | `PLAYER_DIED` | Victim + Attacker | `Death` / `Kill` |
 | `PLAYER_REVIVED` | Reviver + Revived player | `Revive` / `Revived` |
-| `PLAYER_POSSESS` | Player | `PossessAdminCam` |
-| `PLAYER_UN_POSSESS` | Player | `UnPossessAdminCam` |
 | `PLAYER_SQUAD_CHANGE` | Player | `SquadChange` |
 | `CHAT_MESSAGE` | Player (optional, can be disabled) | `Chat` |
 | `SQUAD_CREATED` | Player | `SquadCreated` |
@@ -72,10 +70,10 @@ Add the plugin to your SquadJS `config.json` under `plugins`:
 |---|---|---|---|
 | `defaultInactiveMinutes` | Number | `10` | Inactivity threshold in minutes when running `!afk` with no argument |
 | `ignoreChatForActivity` | Boolean | `false` | If `true`, chat messages will **not** count as player activity |
-| `adminChatOnly` | Boolean | `false` | If `true`, the `!afk` command only works in admin chat (`ChatAdmin`) |
+| `adminChatOnly` | Boolean | `true` | If `true`, the `!afk` command only works in admin chat (`ChatAdmin`) |
 | `commandPrefix` | String | `"afk"` | The chat command trigger word (without the `!` prefix) |
 | `warnMessageHeader` | String | `"--- AFK Report ---"` | Header text shown at the top of AFK report messages |
-| `maxPage` | Number | `2` | Maximum number of warn pages (messages) to send per command response. |
+| `maxPage` | Number | `2` | Maximum number of warn pages (messages) to send per command response |
 
 All options are optional and have sensible defaults. No connectors (Discord, database) are required.
 
