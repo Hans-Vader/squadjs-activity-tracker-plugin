@@ -4,7 +4,7 @@ A SquadJS plugin that tracks player activity to help server moderators identify 
 
 ## Usage
 
-Type these commands in the in-game chat:
+Type these commands in the in-game admin chat (or any chat if `adminChatOnly` is `false`):
 
 | Command | Description |
 |---|---|
@@ -47,6 +47,8 @@ The plugin records player activity from the following server events:
 | `PLAYER_DISCONNECTED` | Player (removes tracking data) | — |
 | `NEW_GAME` | Clears all data and re-seeds connected players | `NewGame` |
 
+Players already connected when the plugin starts are seeded with the label `Mount`. Players without any record show `Unknown`.
+
 ## Configuration
 
 Add the plugin to your SquadJS `config.json` under `plugins`:
@@ -57,7 +59,7 @@ Add the plugin to your SquadJS `config.json` under `plugins`:
   "enabled": true,
   "defaultInactiveMinutes": 10,
   "ignoreChatForActivity": false,
-  "adminChatOnly": false,
+  "adminChatOnly": true,
   "commandPrefix": "afk",
   "warnMessageHeader": "--- AFK Report ---",
   "maxPage": 2
